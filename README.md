@@ -1,31 +1,61 @@
-# Event-based logging example: Node.js
+const fs = require('fs');
+const crypto = require('crypto');
 
-The program uses a simple Node app with `NodeJS-example.cs`. The Event definitions are in `appEvents.js`.
+// Function to log events
+function logEvent(nodeId, event) {
+    const timestamp = new Date().toISOString();
+    const hash = crypto.createHash('sha256').update(`${nodeId}:${timestamp}:${event}`).digest('hex');
 
-# Program output
+    const logEntry = {
+        nodeId,
+        timestamp,
+        event,
+        hash
+    };
 
-The program uses console output instead of logging to simplfy testing.
+    // Append to local log file
+    fs.appendFileSync('events.log', JSON.stringify(logEntry) + '\n');
 
-The program also outputs the list of Events to the HTTP response stream.
+    console.log('Event logged:', logEntry);
+}
 
-```
-Server running at http://127.0.0.1:3000/
-2021-06-10T21:05:53.836Z - DatabaseConnectionSuccess
----
-Events:
-	UndefinedError: UndefinedError
-	DatabaseConnectionSuccess: DatabaseConnectionSuccess
-	DatabaseConnectionFailure: DatabaseConnectionFailure
-	DatabaseConnectionTimeout: DatabaseConnectionTimeout
-	ParseStreamUnexpectedToken: ParseStreamUnexpectedToken
-	ParseStreamMissingData: ParseStreamMissingData
-	ParseStreamSuccess: ParseStreamSuccess
-	TokenValidationSucceeded: TokenValidationSucceeded
-	TokenValidationFailedInvalidParams: TokenValidationFailedInvalidParams
-	TokenValidationFailedInvalidDigest: okenValidationFailedInvalidDigest
-	TokenValidationFailedIncorrectSHA: TokenValidationFailedIncorrectSHA
-	AppStarted: AppStarted
-	AppShutdownRequested: AppShutdownRequested
-	NoOp: NoOp
----
-```
+// Example usage
+logEvent('node-1', 'Transaction completed');
+
+//python
+
+import hashlib
+import json
+import requests
+from datetime import datetime
+
+# Function to log events
+def log_event(node_id, event):
+    timestamp = datetime.utcnow().isoformat()
+    log_entry = {
+        "node_id": node_id,
+        "timestamp": timestamp,
+        "event": event,
+    }
+    log_entry["hash"] = hashlib.sha256(json.dumps(log_entry).encode()).hexdigest()
+
+    # Append to local log file
+    with open("events.log", "a") as file:
+        file.write(json.dumps(log_entry) + "\n")
+
+    return log_entry
+
+# Function to synchronize logs with another node
+def sync_logs(node_url, log_entry):
+    try:
+        response = requests.post(f"{node_url}/sync", json=log_entry)
+        if response.status_code == 200:
+            print("Log synchronized successfully!")
+        else:
+            print("Failed to synchronize log:", response.text)
+    except Exception as e:
+        print("Error syncing logs:", str(e))
+
+# Example usage
+new_event = log_event("node-1", "New transaction")
+sync_logs("http://other-node.com", new_event)
